@@ -11,4 +11,4 @@
 - Video games (League of Legends)
 
 ## 💻 Current project
-- Build .NET Core application
+- Godot application
