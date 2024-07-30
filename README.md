@@ -1,6 +1,9 @@
 # 💫 About Me:
-I'm a software developer from Montreal!<br><br>💼 I have experience in C++, Python and Go, in embedded systems, Windows & Linux applications.<br>🌱 I’m currently learning machine learning and Rust language.<br>😄 Fun fact: I enjoy video games and eSports.
-
+I'm a software developer from Montreal!
+<br>
+<br>💼 I have experience in C++, Python and Go, in embedded systems, Windows & Linux applications.
+<br>🌱 I’m currently learning vim, Rust, DSA & machine learning.
+<br>😄 Fun fact: I enjoy video games and eSports.
 
 ## 🌐 Socials:
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-%230077B5.svg?logo=linkedin&logoColor=white)](https://linkedin.com/in/simondkho) 
