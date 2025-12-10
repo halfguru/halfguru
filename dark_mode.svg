@@ -1,0 +1,99 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="938.2001px" height="560px"
+     font-family="ConsolasFallback,Consolas,monospace"
+     font-size="16px">
+
+<style>
+.key      { fill: #ffa657; }
+.value    { fill: #a5d6ff; }
+.cc       { fill: #616e7f; }
+.addColor { fill: #3fb950; }
+.delColor { fill: #f85149; }
+</style>
+
+<rect width="938.2001px" height="560px" fill="#161b22" rx="15"/>
+
+<!-- LEFT ASCII -->
+<text fill="#c9d1d9" xml:space="preserve">
+<tspan x="15" y="30"> </tspan>
+<tspan x="15" y="50">               #&amp;&amp;&amp;&amp;&amp;&amp;&amp;@&amp;&amp;@&amp;&amp;&amp;*           </tspan>
+<tspan x="15" y="70">            %&amp;&amp;&amp;&amp;&amp;&amp;@@&amp;%@@@%&amp;@@&amp;&amp;&amp;@/(      </tspan>
+<tspan x="15" y="90">         &amp;%%@@&amp;&amp;@@&amp;@@&amp;@%&amp;&amp;#&amp;@@@@@&amp;@%#     </tspan>
+<tspan x="15" y="110">        &amp;%@@@&amp;&amp;/%@/#&amp;*&amp;(&amp;@@@@@@#@&amp;&amp;%&amp;.    </tspan>
+<tspan x="15" y="130">      .@@&amp;@@@@@@,@&amp;@&amp;/&amp;&amp;@@@@&amp;@&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;*   </tspan>
+<tspan x="15" y="150">      .#&amp;@@&amp;@@@@@@&amp;&amp;&amp;@&amp;@%&amp;#@&amp;(&amp;#(/##&amp;&amp;&amp;   </tspan>
+<tspan x="15" y="170">      *%&amp;@@@@@@&amp;#(##((**,,,,,*/,,,,(%&amp;&amp;   </tspan>
+<tspan x="15" y="190">       #@@@@&amp;%#//*,,...,...,,,,,,,*/#%%   </tspan>
+<tspan x="15" y="210">       /&amp;&amp;&amp;@#/**,,...........,.,,,,*(#(   </tspan>
+<tspan x="15" y="230">        %(##%(%%%(*,,,.,,,/(%#*(**,,,#/   </tspan>
+<tspan x="15" y="250">      %%*(#%&amp;@%@@&amp;(//*,,*//(@%@&amp;&amp;*,,,/,*  </tspan>
+<tspan x="15" y="270">     ##%(****/#(/,,,*,....,////*,,,,,,,,* </tspan>
+<tspan x="15" y="290">     ##%(/*,,.....,*,. .....    ..,,,,..* </tspan>
+<tspan x="15" y="310">      ##(#/,,...,,,,,......*,.....,,/,,,  </tspan>
+<tspan x="15" y="330">       #*###/*,,,#%&amp;&amp;%(%%%,,,/,,,****.,   </tspan>
+<tspan x="15" y="350">        *#%%#/*(#***,...,,,,,**,*****     </tspan>
+<tspan x="15" y="370">         (##(,,(&amp;&amp;#/,,..(**,*,,,*/        </tspan>
+<tspan x="15" y="390">         .#%#(**((#/***,,,,,,**// ,       </tspan>
+<tspan x="15" y="410">      .((%.%#%#(////,,,,,.,,*///* ,,,,,   </tspan>
+<tspan x="15" y="430"> */(#(#((#%,,%&amp;%#%#(/*,,,,*//(/**  .,,,,,.</tspan>
+<tspan x="15" y="450">,,*/*/#(##%,..,%%%%%%#(((((/**    ..,,,,.,</tspan>
+<tspan x="15" y="470">  ,.,,,,(##*,..*&amp;&amp;%%%%##((((/**   ..,,,,..</tspan>
+<tspan x="15" y="490">   ,.,,,,##*,,,../%%%#((((//,,.   ..,,,,,,</tspan>
+
+</text>
+
+<!-- RIGHT COLUMN -->
+<text fill="#c9d1d9">
+<tspan x="428.2" y="30">simon@ho -------------------------------------------</tspan>
+<tspan x="428.2" y="50" class="cc">. </tspan>
+<tspan class="key">OS: </tspan><tspan class="cc">.............................</tspan><tspan class="value">Windows 10, Linux</tspan>
+<tspan x="428.2" y="70" class="cc">. </tspan>
+<tspan class="key">Uptime: </tspan><tspan class="cc">...............</tspan><tspan class="value">33 years, 5 months, 26 days</tspan>
+<tspan x="428.2" y="90" class="cc">. </tspan>
+<tspan class="key">Host: </tspan><tspan class="cc">..............................</tspan><tspan class="value">Morgan Stanley</tspan>
+<tspan x="428.2" y="110" class="cc">. </tspan>
+<tspan class="key">Kernel: </tspan><tspan class="cc">........................</tspan><tspan class="value">Software Developer</tspan>
+<tspan x="428.2" y="130" class="cc">. </tspan>
+<tspan class="key">IDE: </tspan><tspan class="cc">................</tspan><tspan class="value">VSCode 1.106.3, neovim 0.11.5</tspan>
+<tspan x="428.2" y="170" class="cc">. </tspan>
+<tspan class="key">Languages.Programming: </tspan><tspan class="cc">.............</tspan><tspan class="value">C++, C, Python</tspan>
+<tspan x="428.2" y="190" class="cc">. </tspan>
+<tspan class="key">Languages.Computer: </tspan><tspan class="cc">.............</tspan><tspan class="value">JSON, YAML, LaTeX</tspan>
+<tspan x="428.2" y="210" class="cc">. </tspan>
+<tspan class="key">Languages.Real: </tspan><tspan class="cc">...................</tspan><tspan class="value">English, French</tspan>
+<tspan x="428.2" y="250" class="cc">. </tspan>
+<tspan class="key">Hobbies.Software: </tspan><tspan class="cc">..........</tspan><tspan class="value">Omarchy, neovim, AI ML</tspan>
+<tspan x="428.2" y="270" class="cc">. </tspan>
+<tspan class="key">Hobbies.Hardware: </tspan><tspan class="cc">..........</tspan><tspan class="value">Raspberry Pi tinkering</tspan>
+<tspan x="428.2" y="310">- Contact ------------------------------------------</tspan>
+<tspan x="428.2" y="330" class="cc">. </tspan>
+<tspan class="key">Email.Personal: </tspan><tspan class="cc">.............</tspan><tspan class="value">simon.dk.ho@gmail.com</tspan>
+<tspan x="428.2" y="350" class="cc">. </tspan>
+<tspan class="key">Email.Work: </tspan><tspan class="cc">...........</tspan><tspan class="value">Simon.Ho1@morganstanley.com</tspan>
+<tspan x="428.2" y="370" class="cc">. </tspan>
+<tspan class="key">LinkedIn: </tspan><tspan class="cc">...............................</tspan><tspan class="value">simondkho</tspan>
+<tspan x="428.2" y="410">- GitHub Stats -------------------------------------</tspan>
+<tspan x="428.2" y="430" class="cc">. </tspan>
+<tspan class="key">Repos: </tspan>
+<tspan class="cc">......................</tspan>
+<tspan class="value">22 (Contributed: 24)</tspan>
+<tspan x="428.2" y="450" class="cc">. </tspan>
+<tspan class="key">Stars: </tspan><tspan class="cc">..........................................</tspan><tspan class="value">1</tspan>
+<tspan x="428.2" y="470" class="cc">. </tspan>
+<tspan class="key">Commits: </tspan><tspan class="cc">........................................</tspan><tspan class="value">2</tspan>
+<tspan x="428.2" y="490" class="cc">. </tspan>
+<tspan class="key">Followers: </tspan><tspan class="cc">......................................</tspan><tspan class="value">3</tspan>
+<tspan x="428.2" y="510" class="cc">. </tspan>
+<tspan class="key">LoC on GitHub: </tspan>
+<tspan class="cc">........</tspan>
+<tspan class="value">17276</tspan>
+<tspan class="cc"> ( </tspan>
+<tspan class="addColor">22720</tspan><tspan class="addColor">++</tspan>
+<tspan class="cc">, </tspan>
+<tspan class="delColor">5444</tspan><tspan class="delColor">--</tspan>
+<tspan class="cc"> )</tspan>
+
+</text>
+
+</svg>
