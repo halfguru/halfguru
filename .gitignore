@@ -1,0 +1,33 @@
+# Rust 
+/target/
+
+# Incremental compilation artifacts
+/.rustc_info.json
+
+# Rust build artifacts
+*.rlib
+*.rmeta
+
+# VSCode
+.vscode/
+# JetBrains / CLion
+.idea/
+# Sublime / Vim / Emacs
+*.swp
+*.swo
+*.swn
+*~
+\.ropeproject/
+
+# macOS
+.DS_Store
+# Windows
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Generated files
+/out/       
+generated/        
