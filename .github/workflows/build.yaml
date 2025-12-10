@@ -44,8 +44,7 @@ jobs:
         env:
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
           USER_NAME: halfguru
-        run: |
-          ./target/release/<YOUR_BINARY_NAME>
+        run: cargo run --release
 
       - name: Commit Updated Files
         run: |
