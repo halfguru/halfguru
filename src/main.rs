@@ -1,15 +1,13 @@
 mod age;
-mod ascii;
 mod config;
 mod github;
-mod stats;
 mod svg;
 
 use chrono::{NaiveDate, Utc};
 use config::load_config;
 use github::GithubClient;
-use stats::Stats;
 use std::fs;
+use svg::Stats;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
