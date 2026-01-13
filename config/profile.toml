@@ -1,0 +1,28 @@
+name = "simon@ho"
+birthday = "1992-06-14"
+github_username = "halfguru"
+github_user_agent = "halfguru-stats"
+
+[system]
+os = "Windows 10, Linux"
+host = "Morgan Stanley"
+kernel = "Software Developer"
+ide = "VSCode 1.106.3, neovim 0.11.5"
+
+[languages]
+programming = "C++, C, Python"
+computer = "JSON, YAML, LaTeX"
+real = "English, French"
+
+[hobbies]
+software = "Omarchy, neovim, AI ML"
+hardware = "Raspberry Pi tinkering"
+
+[contact]
+personal_email = "simon.dk.ho@gmail.com"
+work_email = "Simon.Ho1@morganstanley.com"
+linkedin = "simondkho"
+
+[headers]
+contact = "- Contact"
+github_stats = "- GitHub Stats"

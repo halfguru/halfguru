@@ -1,4 +1,5 @@
 use crate::ascii::ASCII;
+use crate::config::Config;
 use crate::stats::Stats;
 
 const START_Y: i32 = 30;
@@ -89,30 +90,29 @@ fn build_ascii_tspans() -> (String, usize) {
     (out, max_width)
 }
 
-// Builds the right column content and returns (tspans, width, height)
-
 fn build_right_column(
     stats: &Stats,
     age: &str,
+    config: &Config,
     ascii_width_px: f32,
     ascii_height_px: f32,
 ) -> (String, f32, f32) {
-    let os_value = "Windows 10, Linux".to_string();
+    let os_value = config.system.os.clone();
     let uptime_value = age.to_string();
-    let host_value = "Morgan Stanley".to_string();
-    let kernel_value = "Software Developer".to_string();
-    let ide_value = "VSCode 1.106.3, neovim 0.11.5".to_string();
+    let host_value = config.system.host.clone();
+    let kernel_value = config.system.kernel.clone();
+    let ide_value = config.system.ide.clone();
 
-    let lang_prog_value = "C++, C, Python".to_string();
-    let lang_comp_value = "JSON, YAML, LaTeX".to_string();
-    let lang_real_value = "English, French".to_string();
+    let lang_prog_value = config.languages.programming.clone();
+    let lang_comp_value = config.languages.computer.clone();
+    let lang_real_value = config.languages.real.clone();
 
-    let hobby_soft_value = "Omarchy, neovim, AI ML".to_string();
-    let hobby_hard_value = "Raspberry Pi tinkering".to_string();
+    let hobby_soft_value = config.hobbies.software.clone();
+    let hobby_hard_value = config.hobbies.hardware.clone();
 
-    let contact_personal_value = "simon.dk.ho@gmail.com".to_string();
-    let contact_work_value = "Simon.Ho1@morganstanley.com".to_string();
-    let contact_linkedin_value = "simondkho".to_string();
+    let contact_personal_value = config.contact.personal_email.clone();
+    let contact_work_value = config.contact.work_email.clone();
+    let contact_linkedin_value = config.contact.linkedin.clone();
 
     let repos_value = stats.repos.to_string();
     let contrib_value = stats.contributed_repos.to_string();
@@ -190,9 +190,9 @@ fn build_right_column(
     let (lo_k, lo_d, _) = row!("LoC on GitHub", &loc_fake);
 
     // Headers
-    let h_main = build_header_line("simon@ho", align_width);
-    let h_contact = build_header_line("- Contact", align_width);
-    let h_stats = build_header_line("- GitHub Stats", align_width);
+    let h_main = build_header_line(&config.name, align_width);
+    let h_contact = build_header_line(&config.headers.contact, align_width);
+    let h_stats = build_header_line(&config.headers.github_stats, align_width);
 
     let dummy = "".to_string();
     enum Line<'a> {
@@ -376,8 +376,7 @@ fn build_right_column(
     (right_tspans, content_width, content_height)
 }
 
-/// Main SVG generation function
-pub fn generate_svg(stats: &Stats, age: &str, theme: Theme) -> String {
+pub fn generate_svg(stats: &Stats, age: &str, config: &Config, theme: Theme) -> String {
     let colors = theme.colors();
 
     let (ascii_tspans, ascii_chars_wide) = build_ascii_tspans();
@@ -385,7 +384,8 @@ pub fn generate_svg(stats: &Stats, age: &str, theme: Theme) -> String {
     let ascii_width_px = ascii_chars_wide as f32 * CHAR_WIDTH + LEFT_PADDING;
     let ascii_height_px = ascii_lines as f32 * LINE_HEIGHT as f32 + START_Y as f32;
 
-    let (right_tspans, w, h) = build_right_column(stats, age, ascii_width_px, ascii_height_px);
+    let (right_tspans, w, h) =
+        build_right_column(stats, age, config, ascii_width_px, ascii_height_px);
 
     format!(
         r#"<?xml version='1.0' encoding='UTF-8'?>

@@ -16,6 +16,7 @@ struct CountObj {
 #[derive(Clone)]
 pub struct GithubClient {
     token: Arc<String>,
+    user_agent: Arc<String>,
     http: Arc<Client>,
 }
 
@@ -28,11 +29,12 @@ pub struct LocStats {
 
 impl GithubClient {
     /// Create a GitHub GraphQL client using ACCESS_TOKEN env variable.
-    pub fn new() -> Result<Self> {
+    pub fn new(user_agent: &str) -> Result<Self> {
         let token =
             std::env::var("ACCESS_TOKEN").context("ACCESS_TOKEN environment variable not set")?;
         Ok(Self {
             token: Arc::new(token),
+            user_agent: Arc::new(user_agent.to_string()),
             http: Arc::new(Client::new()),
         })
     }
@@ -50,7 +52,7 @@ impl GithubClient {
                 .http
                 .post("https://api.github.com/graphql")
                 .bearer_auth(&*self.token)
-                .header("User-Agent", "halfguru-stats")
+                .header("User-Agent", &*self.user_agent)
                 .json(&serde_json::json!({ "query": query }));
 
             let resp = req

@@ -1,24 +1,28 @@
 mod age;
 mod ascii;
+mod config;
 mod github;
 mod stats;
 mod svg;
 
 use chrono::{NaiveDate, Utc};
+use config::load_config;
 use github::GithubClient;
 use stats::Stats;
 use std::fs;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let config = load_config("config/profile.toml")?;
+
     // Calculate age
-    let birthday = NaiveDate::from_ymd_opt(1992, 6, 14).unwrap();
+    let birthday = NaiveDate::parse_from_str(&config.birthday, "%Y-%m-%d")?;
     let today = Utc::now().date_naive();
     let age = age::age_string(birthday, today);
 
     // GitHub API client
-    let client = GithubClient::new()?;
-    let username = "halfguru";
+    let client = GithubClient::new(&config.github_user_agent)?;
+    let username = &config.github_username;
 
     let loc = client.total_loc(username).await?;
     let stats = Stats {
@@ -33,8 +37,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Generate SVG
-    let svg_dark = svg::generate_svg(&stats, &age, svg::Theme::Dark);
-    let svg_light = svg::generate_svg(&stats, &age, svg::Theme::Light);
+    let svg_dark = svg::generate_svg(&stats, &age, &config, svg::Theme::Dark);
+    let svg_light = svg::generate_svg(&stats, &age, &config, svg::Theme::Light);
 
     fs::write("dark_mode.svg", svg_dark)?;
     fs::write("light_mode.svg", svg_light)?;
