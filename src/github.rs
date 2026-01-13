@@ -191,13 +191,12 @@ impl GithubClient {
             .context("Failed to deserialize list_owned_repos response")?;
 
         let mut out = Vec::new();
-        if let Some(data) = parsed.data {
-            if let Some(user) = data.user {
-                if let Some(nodes) = user.repositories.nodes {
-                    for n in nodes {
-                        out.push(n.name);
-                    }
-                }
+        if let Some(data) = parsed.data
+            && let Some(user) = data.user
+            && let Some(nodes) = user.repositories.nodes
+        {
+            for n in nodes {
+                out.push(n.name);
             }
         }
 
@@ -378,13 +377,12 @@ impl GithubClient {
             serde_json::from_value(json).context("Failed to deserialize star_count response")?;
 
         let mut total = 0u64;
-        if let Some(data) = parsed.data {
-            if let Some(user) = data.user {
-                if let Some(nodes) = user.repositories.nodes {
-                    for n in nodes {
-                        total += n.stargazers.total_count;
-                    }
-                }
+        if let Some(data) = parsed.data
+            && let Some(user) = data.user
+            && let Some(nodes) = user.repositories.nodes
+        {
+            for n in nodes {
+                total += n.stargazers.total_count;
             }
         }
 

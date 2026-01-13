@@ -12,10 +12,19 @@
 //!   • leap years
 //!   • varying month lengths
 
-use chrono::{Datelike, NaiveDate};
+use anyhow::{Context, Result};
+use chrono::{Datelike, NaiveDate, Utc};
+
+/// Returns a human age as a string given a birthday date string in YYYY-MM-DD format.
+pub fn age_from_birthday(birthday: &str) -> Result<String> {
+    let birthdate = NaiveDate::parse_from_str(birthday, "%Y-%m-%d")
+        .context("Invalid birthday format, expected YYYY-MM-DD")?;
+    let today = Utc::now().date_naive();
+    Ok(age_string(birthdate, today))
+}
 
 /// Returns a human age as a string
-pub fn age_string(birthdate: NaiveDate, today: NaiveDate) -> String {
+fn age_string(birthdate: NaiveDate, today: NaiveDate) -> String {
     let mut years = today.year() - birthdate.year();
     let mut months = today.month() as i32 - birthdate.month() as i32;
     let mut days = today.day() as i32 - birthdate.day() as i32;

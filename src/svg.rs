@@ -1,14 +1,16 @@
+use crate::age;
 use crate::config::Config;
 
 const ASCII: &str = include_str!("ascii.txt");
 
-const START_Y: i32 = 30;
-const LINE_HEIGHT: i32 = 20;
-const LEFT_PADDING: f32 = 15.0;
-const GAP_BETWEEN_COLUMNS: f32 = 10.0;
-const RIGHT_PADDING: f32 = 30.0;
-const CHAR_WIDTH: f32 = 9.6;
-const MIN_RIGHT_COL_CHARS: usize = 50;
+// Layout constants for SVG positioning
+const TEXT_TOP_MARGIN_PX: i32 = 30;
+const LINE_SPACING_PX: i32 = 20;
+const ASCII_LEFT_MARGIN_PX: f32 = 15.0;
+const SPACE_BETWEEN_COLUMNS_PX: f32 = 10.0;
+const RIGHT_MARGIN_PX: f32 = 30.0;
+const MONOCHAR_WIDTH_PX: f32 = 9.6;
+const MIN_RIGHT_COLUMN_WIDTH_CHARS: usize = 50;
 
 #[derive(Clone, Copy)]
 pub enum Theme {
@@ -90,10 +92,10 @@ fn build_ascii_tspans() -> (String, usize) {
     let mut max_width = 0;
 
     for (i, line) in ASCII.lines().enumerate() {
-        let y = START_Y + (i as i32) * LINE_HEIGHT;
+        let y = TEXT_TOP_MARGIN_PX + (i as i32) * LINE_SPACING_PX;
         max_width = max_width.max(line.len());
         out.push_str(&format!(
-            "<tspan x=\"{LEFT_PADDING}\" y=\"{y}\">{}</tspan>\n",
+            "<tspan x=\"{ASCII_LEFT_MARGIN_PX}\" y=\"{y}\">{}</tspan>\n",
             escape_xml(line)
         ));
     }
@@ -103,13 +105,13 @@ fn build_ascii_tspans() -> (String, usize) {
 
 fn build_right_column(
     stats: &Stats,
-    age: &str,
     config: &Config,
     ascii_width_px: f32,
     ascii_height_px: f32,
 ) -> (String, f32, f32) {
     let os_value = config.system.os.clone();
-    let uptime_value = age.to_string();
+    let uptime_value =
+        age::age_from_birthday(&config.birthday).unwrap_or_else(|_| "Unknown".to_string());
     let host_value = config.system.host.clone();
     let kernel_value = config.system.kernel.clone();
     let ide_value = config.system.ide.clone();
@@ -168,7 +170,7 @@ fn build_right_column(
         .max()
         .unwrap_or(0);
 
-    align_width = align_width.max(MIN_RIGHT_COL_CHARS);
+    align_width = align_width.max(MIN_RIGHT_COLUMN_WIDTH_CHARS);
 
     macro_rules! row {
         ($k:expr, $v:expr) => {
@@ -317,12 +319,12 @@ fn build_right_column(
     ];
 
     // Render
-    let right_height_px = lines.len() as f32 * LINE_HEIGHT as f32 + START_Y as f32;
-    let right_x = ascii_width_px + GAP_BETWEEN_COLUMNS;
+    let right_height_px = lines.len() as f32 * LINE_SPACING_PX as f32 + TEXT_TOP_MARGIN_PX as f32;
+    let right_x = ascii_width_px + SPACE_BETWEEN_COLUMNS_PX;
 
     let mut right_tspans = String::new();
     for (i, line) in lines.iter().enumerate() {
-        let y = START_Y + (i as i32) * LINE_HEIGHT;
+        let y = TEXT_TOP_MARGIN_PX + (i as i32) * LINE_SPACING_PX;
 
         match line {
             Line::Blank => {}
@@ -381,22 +383,21 @@ fn build_right_column(
         }
     }
 
-    let content_width = right_x + (align_width as f32) * CHAR_WIDTH + RIGHT_PADDING;
+    let content_width = right_x + (align_width as f32) * MONOCHAR_WIDTH_PX + RIGHT_MARGIN_PX;
     let content_height = ascii_height_px.max(right_height_px) + 30.0;
 
     (right_tspans, content_width, content_height)
 }
 
-pub fn generate_svg(stats: &Stats, age: &str, config: &Config, theme: Theme) -> String {
+pub fn generate_svg(stats: &Stats, config: &Config, theme: Theme) -> String {
     let colors = theme.colors();
 
     let (ascii_tspans, ascii_chars_wide) = build_ascii_tspans();
     let ascii_lines = ASCII.lines().count();
-    let ascii_width_px = ascii_chars_wide as f32 * CHAR_WIDTH + LEFT_PADDING;
-    let ascii_height_px = ascii_lines as f32 * LINE_HEIGHT as f32 + START_Y as f32;
+    let ascii_width_px = ascii_chars_wide as f32 * MONOCHAR_WIDTH_PX + ASCII_LEFT_MARGIN_PX;
+    let ascii_height_px = ascii_lines as f32 * LINE_SPACING_PX as f32 + TEXT_TOP_MARGIN_PX as f32;
 
-    let (right_tspans, w, h) =
-        build_right_column(stats, age, config, ascii_width_px, ascii_height_px);
+    let (right_tspans, w, h) = build_right_column(stats, config, ascii_width_px, ascii_height_px);
 
     format!(
         r#"<?xml version='1.0' encoding='UTF-8'?>
