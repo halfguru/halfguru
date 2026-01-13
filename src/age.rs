@@ -24,7 +24,7 @@ pub fn age_from_birthday(birthday: &str) -> Result<String> {
 }
 
 /// Returns a human age as a string
-fn age_string(birthdate: NaiveDate, today: NaiveDate) -> String {
+pub(crate) fn age_string(birthdate: NaiveDate, today: NaiveDate) -> String {
     let mut years = today.year() - birthdate.year();
     let mut months = today.month() as i32 - birthdate.month() as i32;
     let mut days = today.day() as i32 - birthdate.day() as i32;
@@ -88,4 +88,103 @@ fn days_in_month(year: i32, month: u32) -> u32 {
 ///   - except divisible by 400 → leap year
 fn is_leap_year(year: i32) -> bool {
     (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::NaiveDate;
+
+    #[test]
+    fn test_is_leap_year() {
+        assert!(is_leap_year(2024));
+        assert!(is_leap_year(2000));
+        assert!(is_leap_year(1600));
+        assert!(!is_leap_year(2023));
+        assert!(!is_leap_year(1900));
+        assert!(!is_leap_year(1800));
+    }
+
+    #[test]
+    fn test_days_in_month() {
+        assert_eq!(days_in_month(2024, 1), 31);
+        assert_eq!(days_in_month(2024, 4), 30);
+        assert_eq!(days_in_month(2024, 6), 30);
+        assert_eq!(days_in_month(2024, 9), 30);
+        assert_eq!(days_in_month(2024, 11), 30);
+        assert_eq!(days_in_month(2024, 2), 29);
+        assert_eq!(days_in_month(2023, 2), 28);
+    }
+
+    #[test]
+    fn test_plural() {
+        assert_eq!(plural(0), "s");
+        assert_eq!(plural(1), "");
+        assert_eq!(plural(2), "s");
+    }
+
+    #[test]
+    fn test_age_string_same_day() {
+        let birthdate = NaiveDate::from_ymd_opt(2020, 1, 1).unwrap();
+        let today = NaiveDate::from_ymd_opt(2020, 1, 1).unwrap();
+        assert_eq!(age_string(birthdate, today), "0 years, 0 months, 0 days");
+    }
+
+    #[test]
+    fn test_age_string_one_day_later() {
+        let birthdate = NaiveDate::from_ymd_opt(2020, 1, 1).unwrap();
+        let today = NaiveDate::from_ymd_opt(2020, 1, 2).unwrap();
+        assert_eq!(age_string(birthdate, today), "0 years, 0 months, 1 day");
+    }
+
+    #[test]
+    fn test_age_string_one_month_later() {
+        let birthdate = NaiveDate::from_ymd_opt(2020, 1, 1).unwrap();
+        let today = NaiveDate::from_ymd_opt(2020, 2, 1).unwrap();
+        assert_eq!(age_string(birthdate, today), "0 years, 1 month, 0 days");
+    }
+
+    #[test]
+    fn test_age_string_one_year_later() {
+        let birthdate = NaiveDate::from_ymd_opt(2020, 1, 1).unwrap();
+        let today = NaiveDate::from_ymd_opt(2021, 1, 1).unwrap();
+        assert_eq!(age_string(birthdate, today), "1 year, 0 months, 0 days");
+    }
+
+    #[test]
+    fn test_age_string_year_month_day() {
+        let birthdate = NaiveDate::from_ymd_opt(2020, 1, 15).unwrap();
+        let today = NaiveDate::from_ymd_opt(2022, 3, 20).unwrap();
+        assert_eq!(age_string(birthdate, today), "2 years, 2 months, 5 days");
+    }
+
+    #[test]
+    fn test_age_string_month_underflow() {
+        let birthdate = NaiveDate::from_ymd_opt(2020, 3, 15).unwrap();
+        let today = NaiveDate::from_ymd_opt(2021, 1, 10).unwrap();
+        assert_eq!(age_string(birthdate, today), "0 years, 9 months, 26 days");
+    }
+
+    #[test]
+    fn test_age_string_day_underflow() {
+        let birthdate = NaiveDate::from_ymd_opt(2020, 3, 15).unwrap();
+        let today = NaiveDate::from_ymd_opt(2020, 4, 10).unwrap();
+        assert_eq!(age_string(birthdate, today), "0 years, 0 months, 26 days");
+    }
+
+    #[test]
+    fn test_age_from_birthday_valid_format() {
+        let result = age_from_birthday("1990-01-01");
+        assert!(result.is_ok());
+        assert!(result.unwrap().contains("year"));
+    }
+
+    #[test]
+    fn test_age_from_birthday_invalid_format() {
+        let result = age_from_birthday("1990-13-32");
+        assert!(result.is_err());
+
+        let result = age_from_birthday("not-a-date");
+        assert!(result.is_err());
+    }
 }
