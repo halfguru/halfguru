@@ -4,80 +4,59 @@
 Rust-based GitHub statistics generator that creates terminal-style SVG profile cards. Fetches real-time GitHub stats for a user and generates dark/light mode SVG images with neofetch-inspired formatting for README embedding.
 
 ## Tech Stack
-- **Language:** Rust 2024 Edition
-- **Runtime:** Tokio 1.48 (async)
-- **HTTP Client:** reqwest 0.12
+- **Language:** Rust
+- **Runtime:** Tokio
+- **HTTP Client:** reqwest
 - **Serialization:** serde/serde_json/toml
-- **Date/Time:** chrono 0.4
-- **Error Handling:** anyhow 1.0
-- **Testing:** tempfile (for config tests)
-
-## Key Files
-
-| File | Purpose | Lines |
-|------|---------|-------|
-| `src/main.rs` | Entry point: loads config, fetches GitHub stats, generates SVGs | 39 |
-| `src/github.rs` | GraphQL API client with retry logic and repeated deserialization structs | 546 |
-| `src/svg.rs` | SVG generation engine with self-documenting layout constants | 441 |
-| `src/age.rs` | Human-readable age calculation with calendar-aware logic (tests included) | 190 |
-| `src/config.rs` | TOML configuration loader with validation tests | 182 |
-| `src/ascii.txt` | ASCII art content (25 lines) | 25 |
+- **Date/Time:** chrono
+- **Error Handling:** anyhow
 
 ## Commands
 
 ### Build & Run
-- `cargo build --release` - Build release binary
-- `cargo run` - Build and run (generates `dark_mode.svg` and `light_mode.svg`)
+```bash
+cargo build --release    # Build release binary
+cargo run                # Build and run (generates dark_mode.svg and light_mode.svg)
+```
 
-### Testing & Quality (AI should run after edits)
-- `cargo test` - Run tests
-- `cargo fmt` - Format code
-- `cargo clippy` - Run linter
+### Testing
+```bash
+cargo test                          # Run all tests
+cargo test test_plural              # Run single test by name
+cargo test age_string               # Run tests matching pattern
+cargo test -- --nocapture           # Run tests with stdout visible
+```
 
-## Important Patterns
+### Quality (run after edits)
+```bash
+cargo fmt                           # Format code
+cargo clippy                        # Run linter
+cargo clippy -- -D warnings         # Clippy with warnings as errors
+```
 
-### Modularity & Clarity
-- Age calculation self-contained in `age.rs` with public `age_from_birthday()` API
-- SVG constants use self-documenting names (e.g., `TEXT_TOP_MARGIN_PX`) that explain visual impact
-
-### Async Architecture
-- All API calls use async/await with Tokio runtime
-- GitHub API client uses `Arc` for thread-safe shared state
-- Monolithic `graphql()` method handles retries with exponential backoff for 429 and 5xx responses
-
-### Error Handling
-- Uses `anyhow::Result<T>` with context via `.context()`
-- Rate limiting honors Retry-After header, 5xx errors use exponential backoff
-- Errors in `total_loc` are logged to stderr without failing entire operation
-
-### Code Style
-- GraphQL queries as inline strings with `format!`
-- Theme-based styling using enums and match expressions
-- SVG generation uses string templates with manual XML escaping
-- Use `if let` with let-chains instead of nested if statements
+## Architecture
 
 ### Data Flow
-1. `main.rs` loads TOML config file
-2. Creates GitHub client and fetches stats for username from config
-3. Generates dark and light mode SVGs via `svg.rs` (age calculated internally)
-4. Writes SVG files to disk
+1. `main.rs` loads TOML config from `config/profile.toml`
+2. Creates `GithubClient` and fetches stats for configured username
+3. Builds `Stats` struct with aggregated data
+4. Generates SVG via `svg::generate_svg()` for each theme
+5. Writes `dark_mode.svg` and `light_mode.svg` to disk
 
-## Testing
-
-### Test Coverage
-- `config.rs` tests: config parsing, missing required fields, invalid birthday format
-- `age.rs` tests: leap year rules, month lengths, plural logic, age calculation edge cases
-- Tests use `tempfile` for isolated file I/O testing
-
-### Running Tests
-- `cargo test` - Run all tests
-- Tests verify core logic without requiring GitHub API calls or mocking
+### Key Modules
+| Module | Purpose |
+|--------|---------|
+| `main.rs` | Entry point, orchestrates fetch and generation |
+| `github.rs` | GraphQL client with retry logic, deserialization structs |
+| `svg.rs` | SVG generation with theme support, layout constants |
+| `age.rs` | Calendar-aware age calculation with tests |
+| `config.rs` | TOML config parsing with validation tests |
 
 ## Environment Setup
-- **Config:** `config/profile.toml` contains user settings (birthday, GitHub username, display info)
-- **Required:** `ACCESS_TOKEN` environment variable (GitHub personal access token)
+- **Config:** `config/profile.toml` (user settings)
+- **Required:** `ACCESS_TOKEN` env variable (GitHub PATH)
 - Set with: `export ACCESS_TOKEN=your_token_here`
 
 ## Output Files
-- `dark_mode.svg` - Dark theme card (~938x560px)
-- `light_mode.svg` - Light theme card (~938x560px)
+- `dark_mode.svg` - Dark theme (~938x560px)
+- `light_mode.svg` - Light theme (~938x560px)
