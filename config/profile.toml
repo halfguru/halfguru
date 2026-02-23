@@ -3,7 +3,7 @@ birthday = "1992-06-14"
 github_username = "halfguru"
 github_user_agent = "halfguru-stats"
 ascii_file = "config/ascii.txt"
-theme = "matrix"
+theme = "ayu"
 
 [system]
 os = "Windows 10, Linux"
