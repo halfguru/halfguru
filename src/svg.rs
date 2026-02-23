@@ -1,5 +1,6 @@
 use crate::age;
 use crate::config::Config;
+use std::collections::HashMap;
 use std::fs;
 
 // Layout constants for SVG positioning
@@ -86,20 +87,75 @@ fn build_header_line(label: &str, align_width: usize) -> String {
     format!("{base}{}", "-".repeat(dash_count))
 }
 
-fn build_ascii_tspans(ascii: &str) -> (String, usize) {
+fn build_ascii_tspans(ascii: &str, color_map: &HashMap<char, String>) -> (String, usize) {
     let mut out = String::new();
     let mut max_width = 0;
 
     for (i, line) in ascii.lines().enumerate() {
         let y = TEXT_TOP_MARGIN_PX + (i as i32) * LINE_SPACING_PX;
         max_width = max_width.max(line.len());
-        out.push_str(&format!(
-            "<tspan x=\"{ASCII_LEFT_MARGIN_PX}\" y=\"{y}\">{}</tspan>\n",
-            escape_xml(line)
-        ));
+
+        if line.is_empty() {
+            out.push_str(&format!(
+                "<tspan x=\"{ASCII_LEFT_MARGIN_PX}\" y=\"{y}\"> </tspan>\n"
+            ));
+            continue;
+        }
+
+        let segments = group_by_color(line, color_map);
+        let mut first = true;
+        for (text, color) in segments {
+            let escaped = escape_xml(&text);
+            if first {
+                if let Some(c) = color {
+                    out.push_str(&format!(
+                        "<tspan x=\"{ASCII_LEFT_MARGIN_PX}\" y=\"{y}\" fill=\"{c}\">{escaped}</tspan>"
+                    ));
+                } else {
+                    out.push_str(&format!(
+                        "<tspan x=\"{ASCII_LEFT_MARGIN_PX}\" y=\"{y}\">{escaped}</tspan>"
+                    ));
+                }
+                first = false;
+            } else if let Some(c) = color {
+                out.push_str(&format!("<tspan fill=\"{c}\">{escaped}</tspan>"));
+            } else {
+                out.push_str(&format!("<tspan>{escaped}</tspan>"));
+            }
+        }
+        out.push('\n');
     }
 
     (out, max_width)
+}
+
+fn group_by_color(line: &str, color_map: &HashMap<char, String>) -> Vec<(String, Option<String>)> {
+    let mut segments: Vec<(String, Option<String>)> = Vec::new();
+    let chars: Vec<char> = line.chars().collect();
+
+    let mut i = 0;
+    while i < chars.len() {
+        let ch = chars[i];
+        let color = color_map.get(&ch).cloned();
+        let mut segment = String::new();
+        segment.push(ch);
+
+        while i + 1 < chars.len() {
+            let next_ch = chars[i + 1];
+            let next_color = color_map.get(&next_ch).cloned();
+            if next_color == color {
+                segment.push(next_ch);
+                i += 1;
+            } else {
+                break;
+            }
+        }
+
+        segments.push((segment, color));
+        i += 1;
+    }
+
+    segments
 }
 
 fn build_right_column(
@@ -392,7 +448,7 @@ pub fn generate_svg(stats: &Stats, config: &Config, theme: Theme) -> String {
     let colors = theme.colors();
 
     let ascii = fs::read_to_string(&config.ascii_file).unwrap_or_default();
-    let (ascii_tspans, ascii_chars_wide) = build_ascii_tspans(&ascii);
+    let (ascii_tspans, ascii_chars_wide) = build_ascii_tspans(&ascii, &config.ascii_colors);
     let ascii_lines = ascii.lines().count();
     let ascii_width_px = ascii_chars_wide as f32 * MONOCHAR_WIDTH_PX + ASCII_LEFT_MARGIN_PX;
     let ascii_height_px = ascii_lines as f32 * LINE_SPACING_PX as f32 + TEXT_TOP_MARGIN_PX as f32;
