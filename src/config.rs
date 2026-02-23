@@ -13,6 +13,8 @@ pub struct Config {
     pub github_user_agent: String,
     #[serde(default = "default_ascii_file")]
     pub ascii_file: String,
+    #[serde(default = "default_theme")]
+    pub theme: String,
     #[serde(default)]
     pub ascii_colors: HashMap<char, String>,
     #[serde(rename = "system")]
@@ -29,6 +31,10 @@ pub struct Config {
 
 fn default_ascii_file() -> String {
     "config/ascii.txt".to_string()
+}
+
+fn default_theme() -> String {
+    "github".to_string()
 }
 
 #[derive(Debug, Deserialize)]
