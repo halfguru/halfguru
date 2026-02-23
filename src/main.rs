@@ -2,6 +2,7 @@ mod age;
 mod config;
 mod github;
 mod svg;
+mod theme;
 
 use config::load_config;
 use github::GithubClient;
@@ -27,8 +28,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         loc_total: (loc.additions as i64) - (loc.deletions as i64),
     };
 
-    let svg_dark = svg::generate_svg(&stats, &config, svg::Theme::Dark);
-    let svg_light = svg::generate_svg(&stats, &config, svg::Theme::Light);
+    let svg_dark = svg::generate_svg(&stats, &config, svg::OutputMode::Dark);
+    let svg_light = svg::generate_svg(&stats, &config, svg::OutputMode::Light);
 
     fs::write("dark_mode.svg", svg_dark)?;
     fs::write("light_mode.svg", svg_light)?;
