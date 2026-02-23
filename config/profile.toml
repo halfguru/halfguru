@@ -2,6 +2,7 @@ name = "simon@ho"
 birthday = "1992-06-14"
 github_username = "halfguru"
 github_user_agent = "halfguru-stats"
+ascii_file = "config/ascii.txt"
 
 [system]
 os = "Windows 10, Linux"

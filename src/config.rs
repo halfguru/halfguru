@@ -10,6 +10,8 @@ pub struct Config {
     pub github_username: String,
     #[serde(rename = "github_user_agent")]
     pub github_user_agent: String,
+    #[serde(default = "default_ascii_file")]
+    pub ascii_file: String,
     #[serde(rename = "system")]
     pub system: SystemConfig,
     #[serde(rename = "languages")]
@@ -20,6 +22,10 @@ pub struct Config {
     pub contact: ContactConfig,
     #[serde(rename = "headers")]
     pub headers: HeadersConfig,
+}
+
+fn default_ascii_file() -> String {
+    "config/ascii.txt".to_string()
 }
 
 #[derive(Debug, Deserialize)]

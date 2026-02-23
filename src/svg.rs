@@ -1,7 +1,6 @@
 use crate::age;
 use crate::config::Config;
-
-const ASCII: &str = include_str!("ascii.txt");
+use std::fs;
 
 // Layout constants for SVG positioning
 const TEXT_TOP_MARGIN_PX: i32 = 30;
@@ -87,11 +86,11 @@ fn build_header_line(label: &str, align_width: usize) -> String {
     format!("{base}{}", "-".repeat(dash_count))
 }
 
-fn build_ascii_tspans() -> (String, usize) {
+fn build_ascii_tspans(ascii: &str) -> (String, usize) {
     let mut out = String::new();
     let mut max_width = 0;
 
-    for (i, line) in ASCII.lines().enumerate() {
+    for (i, line) in ascii.lines().enumerate() {
         let y = TEXT_TOP_MARGIN_PX + (i as i32) * LINE_SPACING_PX;
         max_width = max_width.max(line.len());
         out.push_str(&format!(
@@ -392,8 +391,9 @@ fn build_right_column(
 pub fn generate_svg(stats: &Stats, config: &Config, theme: Theme) -> String {
     let colors = theme.colors();
 
-    let (ascii_tspans, ascii_chars_wide) = build_ascii_tspans();
-    let ascii_lines = ASCII.lines().count();
+    let ascii = fs::read_to_string(&config.ascii_file).unwrap_or_default();
+    let (ascii_tspans, ascii_chars_wide) = build_ascii_tspans(&ascii);
+    let ascii_lines = ascii.lines().count();
     let ascii_width_px = ascii_chars_wide as f32 * MONOCHAR_WIDTH_PX + ASCII_LEFT_MARGIN_PX;
     let ascii_height_px = ascii_lines as f32 * LINE_SPACING_PX as f32 + TEXT_TOP_MARGIN_PX as f32;
 
