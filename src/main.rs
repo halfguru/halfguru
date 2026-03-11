@@ -1,4 +1,3 @@
-mod age;
 mod config;
 mod github;
 mod svg;

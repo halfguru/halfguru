@@ -1,3 +1,8 @@
+//! Color themes for SVG output.
+//!
+//! Each theme defines colors for text elements and ASCII art.
+//! ASCII characters are grouped by density (high/medium/low) for coloring.
+
 use std::collections::HashMap;
 
 #[derive(Clone, Debug)]
@@ -13,19 +18,25 @@ pub struct ThemePalette {
 }
 
 impl ThemePalette {
+    /// Maps ASCII art characters to theme colors.
+    ///
+    /// Character groups (for jp2a-generated art):
+    /// - High density: K, X, N, W, 0, O (dark areas)
+    /// - Medium: c, o, x, d, k
+    /// - Low density: . , ' : ; (light areas)
     pub fn ascii_color_map(&self) -> HashMap<char, String> {
         let mut map = HashMap::new();
         let high = self.ascii_high.to_string();
         let medium = self.ascii_medium.to_string();
         let low = self.ascii_low.to_string();
 
-        for ch in ['&', '@', '%', '#'] {
+        for ch in ['K', 'X', 'N', 'W', '0', 'O'] {
             map.insert(ch, high.clone());
         }
-        for ch in ['*', '/', '(', ')'] {
+        for ch in ['c', 'o', 'x', 'd', 'k'] {
             map.insert(ch, medium.clone());
         }
-        for ch in ['.', ','] {
+        for ch in ['.', ',', '\'', ':', ';'] {
             map.insert(ch, low.clone());
         }
         map
