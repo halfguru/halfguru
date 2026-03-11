@@ -101,7 +101,7 @@ cargo clippy -- -D warnings         # Clippy with warnings as errors
 
 ## Environment Setup
 - **Config:** `config/profile.toml` (user settings)
-- **Required:** `ACCESS_TOKEN` env variable (GitHub PATH)
+- **Required:** `ACCESS_TOKEN` env variable (GitHub PAT)
 - Set with: `export ACCESS_TOKEN=your_token_here`
 
 ## Output Files
