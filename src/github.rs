@@ -3,6 +3,7 @@
 //! Fetches user stats (repos, stars, commits, LOC) with retry/backoff handling.
 
 use anyhow::{Context, Result};
+use futures::future::join_all;
 use reqwest::Client;
 use reqwest::header::RETRY_AFTER;
 use serde::Deserialize;
@@ -11,10 +12,31 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
 
+const MAX_RETRIES: usize = 4;
+const INITIAL_BACKOFF_MS: u64 = 250;
+const DEFAULT_RETRY_AFTER_SECS: u64 = 2;
+const REQUEST_TIMEOUT_SECS: u64 = 30;
+const REPOS_PAGE_SIZE: usize = 100;
+
 #[derive(Deserialize)]
 struct CountObj {
     #[serde(rename = "totalCount")]
     total_count: u64,
+}
+
+#[derive(Deserialize)]
+struct GraphQLResponse<T> {
+    data: Option<T>,
+}
+
+#[derive(Deserialize)]
+struct UserData<T> {
+    user: Option<T>,
+}
+
+#[derive(Deserialize)]
+struct RepositoryData<T> {
+    repository: Option<T>,
 }
 
 #[derive(Clone)]
@@ -31,21 +53,49 @@ pub struct LocStats {
     pub commits: u64,
 }
 
+pub struct Stats {
+    pub repos: u32,
+    pub stars: u32,
+    pub followers: u32,
+    pub commits_total: u32,
+    pub contributed_repos: u32,
+    pub loc_add: i64,
+    pub loc_del: i64,
+    pub loc_total: i64,
+}
+
+impl Stats {
+    pub async fn fetch(client: &GithubClient, username: &str) -> Result<Self> {
+        let loc = client.total_loc(username).await?;
+        Ok(Self {
+            repos: client.owned_repo_count(username).await?,
+            stars: client.star_count(username).await?,
+            followers: client.follower_count(username).await?,
+            commits_total: client.commit_count(username).await?,
+            contributed_repos: client.contributed_repos(username).await?,
+            loc_add: loc.additions as i64,
+            loc_del: loc.deletions as i64,
+            loc_total: (loc.additions as i64) - (loc.deletions as i64),
+        })
+    }
+}
+
 impl GithubClient {
     pub fn new(user_agent: &str) -> Result<Self> {
         let token =
             std::env::var("ACCESS_TOKEN").context("ACCESS_TOKEN environment variable not set")?;
+        let http = Client::builder()
+            .timeout(Duration::from_secs(REQUEST_TIMEOUT_SECS))
+            .build()
+            .context("Failed to create HTTP client")?;
         Ok(Self {
             token: Arc::new(token),
             user_agent: Arc::new(user_agent.to_string()),
-            http: Arc::new(Client::new()),
+            http: Arc::new(http),
         })
     }
 
-    /// Low-level GraphQL request with basic retry/backoff and `errors` checking.
     async fn graphql(&self, query: &str) -> Result<Value> {
-        // Simple retry/backoff policy
-        const MAX_RETRIES: usize = 4;
         let mut attempt = 0usize;
 
         loop {
@@ -66,23 +116,19 @@ impl GithubClient {
             let status = resp.status();
             let headers = resp.headers().clone();
 
-            // Parse JSON (even for non-2xx to capture error payloads)
             let json: Value = resp
                 .json()
                 .await
                 .map_err(|e| anyhow::anyhow!("Failed to parse JSON from GitHub: {e}"))?;
 
-            // If GraphQL returned an `errors` field, treat it as an error.
             if let Some(errors) = json.get("errors") {
                 return Err(anyhow::anyhow!("GraphQL reported errors: {errors:#}"));
             }
 
-            // Retry on rate-limit / server errors. If status is success, return.
             if status.is_success() {
                 return Ok(json);
             }
 
-            // If rate limited, honor Retry-After header when present
             if status.as_u16() == 429 {
                 if attempt >= MAX_RETRIES {
                     return Err(anyhow::anyhow!(
@@ -93,14 +139,14 @@ impl GithubClient {
                     .get(RETRY_AFTER)
                     .and_then(|v| v.to_str().ok())
                     .and_then(|s| s.parse::<u64>().ok())
-                    .unwrap_or(2);
+                    .unwrap_or(DEFAULT_RETRY_AFTER_SECS);
                 sleep(Duration::from_secs(wait_secs)).await;
                 continue;
             }
 
-            // Retry on 5xx server errors
             if status.is_server_error() && attempt < MAX_RETRIES {
-                let backoff = Duration::from_millis(250u64.saturating_mul(1 << (attempt - 1)));
+                let backoff =
+                    Duration::from_millis(INITIAL_BACKOFF_MS.saturating_mul(1 << (attempt - 1)));
                 sleep(backoff).await;
                 continue;
             }
@@ -112,35 +158,22 @@ impl GithubClient {
         }
     }
 
-    /// Fetch number of repositories owned by `username`.
     pub async fn owned_repo_count(&self, username: &str) -> Result<u32> {
         let query = format!(
-            r#"
-            {{
+            r#"{{
                 user(login: "{username}") {{
-                    repositories(ownerAffiliations: OWNER) {{
-                        totalCount
-                    }}
+                    repositories(ownerAffiliations: OWNER) {{ totalCount }}
                 }}
-            }}
-        "#
+            }}"#
         );
 
         #[derive(Deserialize)]
-        struct ReposWrapper {
-            data: Option<UserWrapper>,
-        }
-        #[derive(Deserialize)]
-        struct UserWrapper {
-            user: Option<RepositoriesCount>,
-        }
-        #[derive(Deserialize)]
-        struct RepositoriesCount {
+        struct Repositories {
             repositories: CountObj,
         }
 
         let json = self.graphql(&query).await?;
-        let parsed: ReposWrapper = serde_json::from_value(json)
+        let parsed: GraphQLResponse<UserData<Repositories>> = serde_json::from_value(json)
             .context("Failed to deserialize owned_repo_count response")?;
 
         let count = parsed
@@ -152,89 +185,62 @@ impl GithubClient {
         Ok(count as u32)
     }
 
-    /// List owned repositories (first page; we keep first: 100 to match original behavior).
     pub async fn list_owned_repos(&self, username: &str) -> Result<Vec<String>> {
         let query = format!(
-            r#"
-        {{
-            user(login: "{username}") {{
-                repositories(ownerAffiliations: OWNER, first: 100) {{
-                    nodes {{
-                        name
+            r#"{{
+                user(login: "{username}") {{
+                    repositories(ownerAffiliations: OWNER, first: {REPOS_PAGE_SIZE}) {{
+                        nodes {{ name }}
                     }}
                 }}
-            }}
-        }}
-        "#
+            }}"#
         );
 
         #[derive(Deserialize)]
-        struct RepoListResponse {
-            data: Option<RepoListData>,
-        }
-        #[derive(Deserialize)]
-        struct RepoListData {
-            user: Option<RepoListUser>,
-        }
-        #[derive(Deserialize)]
-        struct RepoListUser {
+        struct Repositories {
             repositories: RepoNodes,
         }
+
         #[derive(Deserialize)]
         struct RepoNodes {
             nodes: Option<Vec<RepoNameNode>>,
         }
+
         #[derive(Deserialize)]
         struct RepoNameNode {
             name: String,
         }
 
         let json = self.graphql(&query).await?;
-        let parsed: RepoListResponse = serde_json::from_value(json)
+        let parsed: GraphQLResponse<UserData<Repositories>> = serde_json::from_value(json)
             .context("Failed to deserialize list_owned_repos response")?;
 
-        let mut out = Vec::new();
-        if let Some(data) = parsed.data
-            && let Some(user) = data.user
-            && let Some(nodes) = user.repositories.nodes
-        {
-            for n in nodes {
-                out.push(n.name);
-            }
-        }
+        let repos = parsed
+            .data
+            .and_then(|d| d.user)
+            .and_then(|u| u.repositories.nodes)
+            .map(|nodes| nodes.into_iter().map(|n| n.name).collect())
+            .unwrap_or_default();
 
-        Ok(out)
+        Ok(repos)
     }
 
-    /// Follower count
     pub async fn follower_count(&self, username: &str) -> Result<u32> {
         let query = format!(
-            r#"
-            {{
+            r#"{{
                 user(login: "{username}") {{
-                    followers {{
-                        totalCount
-                    }}
+                    followers {{ totalCount }}
                 }}
-            }}
-        "#
+            }}"#
         );
 
         #[derive(Deserialize)]
-        struct FollowersResponse {
-            data: Option<FollowersData>,
-        }
-        #[derive(Deserialize)]
-        struct FollowersData {
-            user: Option<FollowersUser>,
-        }
-        #[derive(Deserialize)]
-        struct FollowersUser {
+        struct Followers {
             followers: CountObj,
         }
 
         let json = self.graphql(&query).await?;
-        let parsed: FollowersResponse = serde_json::from_value(json)
+        let parsed: GraphQLResponse<UserData<Followers>> = serde_json::from_value(json)
             .context("Failed to deserialize follower_count response")?;
 
         let count = parsed
@@ -246,38 +252,25 @@ impl GithubClient {
         Ok(count as u32)
     }
 
-    /// Count of repositories the user has contributed to (totalCount).
     pub async fn contributed_repos(&self, username: &str) -> Result<u32> {
         let query = format!(
-            r#"
-            query {{
+            r#"{{
                 user(login: "{username}") {{
                     repositories(
                         first: 1,
                         ownerAffiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER]
-                    ) {{
-                        totalCount
-                    }}
+                    ) {{ totalCount }}
                 }}
-            }}
-            "#
+            }}"#
         );
 
         #[derive(Deserialize)]
-        struct ContribResponse {
-            data: Option<ContribData>,
-        }
-        #[derive(Deserialize)]
-        struct ContribData {
-            user: Option<ContribUser>,
-        }
-        #[derive(Deserialize)]
-        struct ContribUser {
+        struct ContribRepos {
             repositories: CountObj,
         }
 
         let json = self.graphql(&query).await?;
-        let parsed: ContribResponse = serde_json::from_value(json)
+        let parsed: GraphQLResponse<UserData<ContribRepos>> = serde_json::from_value(json)
             .context("Failed to deserialize contributed_repos response")?;
 
         let total = parsed
@@ -289,33 +282,23 @@ impl GithubClient {
         Ok(total as u32)
     }
 
-    /// Contribution commit count (year-to-date total commit contributions)
     pub async fn commit_count(&self, username: &str) -> Result<u32> {
         let query = format!(
-            r#"
-            {{
+            r#"{{
                 user(login: "{username}") {{
                     contributionsCollection {{
                         totalCommitContributions
                     }}
                 }}
-            }}
-        "#
+            }}"#
         );
 
         #[derive(Deserialize)]
-        struct CommitsResponse {
-            data: Option<CommitsData>,
-        }
-        #[derive(Deserialize)]
-        struct CommitsData {
-            user: Option<CommitsUser>,
-        }
-        #[derive(Deserialize)]
-        struct CommitsUser {
+        struct Contributions {
             #[serde(rename = "contributionsCollection")]
-            contributions_collection: Option<ContribCollection>,
+            contributions_collection: ContribCollection,
         }
+
         #[derive(Deserialize)]
         struct ContribCollection {
             #[serde(rename = "totalCommitContributions")]
@@ -323,60 +306,46 @@ impl GithubClient {
         }
 
         let json = self.graphql(&query).await?;
-        let parsed: CommitsResponse =
+        let parsed: GraphQLResponse<UserData<Contributions>> =
             serde_json::from_value(json).context("Failed to deserialize commit_count response")?;
 
         let commits = parsed
             .data
             .and_then(|d| d.user)
-            .and_then(|u| u.contributions_collection)
-            .map(|c| c.total_commit_contributions)
+            .map(|c| c.contributions_collection.total_commit_contributions)
             .unwrap_or(0);
 
         Ok(commits as u32)
     }
 
-    /// Sum stargazers for first 100 owned repos (same behavior as original).
     pub async fn star_count(&self, username: &str) -> Result<u32> {
         let query = format!(
-            r#"
-        {{
-            user(login: "{username}") {{
-                repositories(ownerAffiliations: OWNER, first: 100) {{
-                    nodes {{
-                        stargazers {{
-                            totalCount
-                        }}
+            r#"{{
+                user(login: "{username}") {{
+                    repositories(ownerAffiliations: OWNER, first: {REPOS_PAGE_SIZE}) {{
+                        nodes {{ stargazers {{ totalCount }} }}
                     }}
                 }}
-            }}
-        }}
-        "#
+            }}"#
         );
 
         #[derive(Deserialize)]
-        struct StarResponse {
-            data: Option<StarData>,
+        struct StarNodes {
+            repositories: RepoNodes,
         }
+
         #[derive(Deserialize)]
-        struct StarData {
-            user: Option<StarUser>,
-        }
-        #[derive(Deserialize)]
-        struct StarUser {
-            repositories: StarRepos,
-        }
-        #[derive(Deserialize)]
-        struct StarRepos {
+        struct RepoNodes {
             nodes: Option<Vec<StarNode>>,
         }
+
         #[derive(Deserialize)]
         struct StarNode {
             stargazers: CountObj,
         }
 
         let json = self.graphql(&query).await?;
-        let parsed: StarResponse =
+        let parsed: GraphQLResponse<UserData<StarNodes>> =
             serde_json::from_value(json).context("Failed to deserialize star_count response")?;
 
         let mut total = 0u64;
@@ -392,37 +361,30 @@ impl GithubClient {
         Ok(total as u32)
     }
 
-    /// Get LOC for a single repository by iterating commit history pages.
-    ///
-    /// Only counts commits authored by `username` (filters out co-authors).
     pub async fn repo_loc(&self, username: &str, repo: &str) -> Result<LocStats> {
         #[derive(Deserialize)]
-        struct RepoHistoryResponse {
-            data: Option<RepoHistoryData>,
-        }
-        #[derive(Deserialize)]
-        struct RepoHistoryData {
-            repository: Option<RepositoryWrapper>,
-        }
-        #[derive(Deserialize)]
-        struct RepositoryWrapper {
+        struct RepoWrapper {
             #[serde(rename = "defaultBranchRef")]
             default_branch_ref: Option<DefaultBranchRef>,
         }
+
         #[derive(Deserialize)]
         struct DefaultBranchRef {
             target: Option<TargetCommit>,
         }
+
         #[derive(Deserialize)]
         struct TargetCommit {
             history: Option<CommitHistoryPage>,
         }
+
         #[derive(Deserialize)]
         struct CommitHistoryPage {
             #[serde(rename = "pageInfo")]
             page_info: PageInfo,
             nodes: Option<Vec<HistoryNode>>,
         }
+
         #[derive(Deserialize)]
         struct PageInfo {
             #[serde(rename = "hasNextPage")]
@@ -430,16 +392,19 @@ impl GithubClient {
             #[serde(rename = "endCursor")]
             end_cursor: Option<String>,
         }
+
         #[derive(Deserialize)]
         struct HistoryNode {
             additions: Option<u64>,
             deletions: Option<u64>,
             author: Option<CommitAuthor>,
         }
+
         #[derive(Deserialize)]
         struct CommitAuthor {
             user: Option<UserLogin>,
         }
+
         #[derive(Deserialize)]
         struct UserLogin {
             login: Option<String>,
@@ -455,49 +420,42 @@ impl GithubClient {
                 .unwrap_or_else(|| "null".to_string());
 
             let query = format!(
-                r#"
-                {{
+                r#"{{
                     repository(name: "{repo}", owner: "{username}") {{
                         defaultBranchRef {{
                             target {{
                                 ... on Commit {{
                                     history(first: 100, after: {after}) {{
-                                        pageInfo {{
-                                            hasNextPage
-                                            endCursor
-                                        }}
+                                        pageInfo {{ hasNextPage endCursor }}
                                         nodes {{
                                             additions
                                             deletions
-                                            author {{
-                                                user {{
-                                                    login
-                                                }}
-                                            }}
+                                            author {{ user {{ login }} }}
                                         }}
                                     }}
                                 }}
                             }}
                         }}
                     }}
-                }}
-                "#,
+                }}"#,
                 after = after
             );
 
             let json = self.graphql(&query).await?;
-            let parsed: RepoHistoryResponse = serde_json::from_value(json)
+            let parsed: GraphQLResponse<RepositoryData<RepoWrapper>> = serde_json::from_value(json)
                 .context("Failed to deserialize repo_loc (history) response")?;
 
             let history = parsed
                 .data
                 .and_then(|d| d.repository)
                 .and_then(|r| r.default_branch_ref)
-                .and_then(|db| db.target)
-                .and_then(|t| t.history)
-                .ok_or_else(|| {
-                    anyhow::anyhow!("Missing commit history for {}/{}", username, repo)
-                })?;
+                .and_then(|d| d.target)
+                .and_then(|t| t.history);
+
+            let history = match history {
+                Some(h) => h,
+                None => return Ok(stats),
+            };
 
             if let Some(nodes) = history.nodes {
                 for node in nodes {
@@ -527,22 +485,25 @@ impl GithubClient {
         Ok(stats)
     }
 
-    /// Aggregate LOC across all owned repos.
-    ///
-    /// Errors on individual repos are logged but don't fail the whole operation.
     pub async fn total_loc(&self, username: &str) -> Result<LocStats> {
         let repos = self.list_owned_repos(username).await?;
-        let mut total = LocStats::default();
+        let futures: Vec<_> = repos
+            .iter()
+            .map(|repo| self.repo_loc(username, repo))
+            .collect();
 
-        for r in &repos {
-            match self.repo_loc(username, r).await {
+        let results = join_all(futures).await;
+
+        let mut total = LocStats::default();
+        for (repo, result) in repos.iter().zip(results) {
+            match result {
                 Ok(loc) => {
                     total.additions = total.additions.saturating_add(loc.additions);
                     total.deletions = total.deletions.saturating_add(loc.deletions);
                     total.commits = total.commits.saturating_add(loc.commits);
                 }
                 Err(e) => {
-                    eprintln!("Warning: failed to get LOC for repo {}: {e:#}", r);
+                    eprintln!("Warning: failed to get LOC for repo {}: {e:#}", repo);
                 }
             }
         }

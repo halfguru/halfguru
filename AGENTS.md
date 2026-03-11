@@ -52,10 +52,11 @@ Rust-based GitHub statistics generator that creates terminal-style SVG profile c
 
 ## Tech Stack
 - **Language:** Rust
-- **Runtime:** Tokio
+- **Runtime:** Tokio (async)
 - **HTTP Client:** reqwest
+- **Async Utilities:** futures
 - **Serialization:** serde/serde_json/toml
-- **Date/Time:** chrono
+- **Date/Time:** jiff
 - **Error Handling:** anyhow
 
 ## Commands
@@ -85,8 +86,8 @@ cargo clippy -- -D warnings         # Clippy with warnings as errors
 
 ### Data Flow
 1. `main.rs` loads TOML config from `config/profile.toml`
-2. Creates `GithubClient` and fetches stats for configured username
-3. Builds `Stats` struct with aggregated data
+2. Creates `GithubClient` and calls `Stats::fetch()` to get all GitHub data
+3. `Stats::fetch()` parallel-fetches LOC for all repos concurrently
 4. Generates SVG via `svg::generate_svg()` for each theme
 5. Writes `dark_mode.svg` and `light_mode.svg` to disk
 
@@ -94,9 +95,9 @@ cargo clippy -- -D warnings         # Clippy with warnings as errors
 | Module | Purpose |
 |--------|---------|
 | `main.rs` | Entry point, orchestrates fetch and generation |
-| `github.rs` | GraphQL client with retry logic, deserialization structs |
-| `svg.rs` | SVG generation with theme support, layout constants |
-| `age.rs` | Calendar-aware age calculation with tests |
+| `github.rs` | GraphQL client, `Stats` struct with parallel LOC fetching |
+| `svg.rs` | SVG generation with theme support, layout constants, age calculation |
+| `theme.rs` | Theme color definitions |
 | `config.rs` | TOML config parsing with validation tests |
 
 ## Environment Setup
