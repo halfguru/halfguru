@@ -107,3 +107,7 @@ cargo clippy -- -D warnings         # Clippy with warnings as errors
 ## Output Files
 - `dark_mode.svg` - Dark theme (~938x560px)
 - `light_mode.svg` - Light theme (~938x560px)
+
+## Attribution
+
+Inspired by [Andrew6rant](https://github.com/Andrew6rant/Andrew6rant) - neofetch-style GitHub profile card generator.
