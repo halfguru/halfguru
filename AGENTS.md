@@ -101,9 +101,24 @@ cargo clippy -- -D warnings         # Clippy with warnings as errors
 
 ## Environment Setup
 - **Config:** `config/profile.toml` (user settings)
-- **Required:** `ACCESS_TOKEN` env variable (GitHub PATH)
+- **Required:** `ACCESS_TOKEN` env variable (GitHub PAT)
 - Set with: `export ACCESS_TOKEN=your_token_here`
+
+## Custom ASCII Art
+Generate your own ASCII art using `jp2a`:
+
+```bash
+# Install
+sudo apt install jp2a
+
+# Generate
+jp2a your_image.png > config/ascii.txt
+```
 
 ## Output Files
 - `dark_mode.svg` - Dark theme (~938x560px)
 - `light_mode.svg` - Light theme (~938x560px)
+
+## Attribution
+
+Inspired by [Andrew6rant](https://github.com/Andrew6rant/Andrew6rant) - neofetch-style GitHub profile card generator.

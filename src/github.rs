@@ -1,3 +1,7 @@
+//! GitHub GraphQL API client.
+//!
+//! Fetches user stats (repos, stars, commits, LOC) with retry/backoff handling.
+
 use anyhow::{Context, Result};
 use reqwest::Client;
 use reqwest::header::RETRY_AFTER;
@@ -28,7 +32,6 @@ pub struct LocStats {
 }
 
 impl GithubClient {
-    /// Create a GitHub GraphQL client using ACCESS_TOKEN env variable.
     pub fn new(user_agent: &str) -> Result<Self> {
         let token =
             std::env::var("ACCESS_TOKEN").context("ACCESS_TOKEN environment variable not set")?;
@@ -390,6 +393,8 @@ impl GithubClient {
     }
 
     /// Get LOC for a single repository by iterating commit history pages.
+    ///
+    /// Only counts commits authored by `username` (filters out co-authors).
     pub async fn repo_loc(&self, username: &str, repo: &str) -> Result<LocStats> {
         #[derive(Deserialize)]
         struct RepoHistoryResponse {
@@ -522,20 +527,21 @@ impl GithubClient {
         Ok(stats)
     }
 
-    /// Aggregate LOC across owned repos (sequential; consider making concurrent).
+    /// Aggregate LOC across all owned repos.
+    ///
+    /// Errors on individual repos are logged but don't fail the whole operation.
     pub async fn total_loc(&self, username: &str) -> Result<LocStats> {
         let repos = self.list_owned_repos(username).await?;
         let mut total = LocStats::default();
 
-        for r in repos {
-            match self.repo_loc(username, &r).await {
+        for r in &repos {
+            match self.repo_loc(username, r).await {
                 Ok(loc) => {
                     total.additions = total.additions.saturating_add(loc.additions);
                     total.deletions = total.deletions.saturating_add(loc.deletions);
                     total.commits = total.commits.saturating_add(loc.commits);
                 }
                 Err(e) => {
-                    // don't fail the whole run for one repo; log and continue.
                     eprintln!("Warning: failed to get LOC for repo {}: {e:#}", r);
                 }
             }

@@ -1,3 +1,7 @@
+//! Profile configuration loaded from TOML.
+//!
+//! See `config/profile.toml` for the schema.
+
 use anyhow::Result;
 use serde::Deserialize;
 use std::collections::HashMap;
