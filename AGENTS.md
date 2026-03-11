@@ -104,6 +104,17 @@ cargo clippy -- -D warnings         # Clippy with warnings as errors
 - **Required:** `ACCESS_TOKEN` env variable (GitHub PAT)
 - Set with: `export ACCESS_TOKEN=your_token_here`
 
+## Custom ASCII Art
+Generate your own ASCII art using `jp2a`:
+
+```bash
+# Install
+sudo apt install jp2a
+
+# Generate
+jp2a your_image.png > config/ascii.txt
+```
+
 ## Output Files
 - `dark_mode.svg` - Dark theme (~938x560px)
 - `light_mode.svg` - Light theme (~938x560px)
